@@ -1,5 +1,5 @@
 # GoReleaser configuration for Terraform Provider
-# Follows the official Terraform provider release format
+# Based on the AWS provider's configuration
 version: 2
 
 # Project name and version
@@ -7,9 +7,9 @@ project_name: terraform-provider-keep
 
 # Build configuration
 builds:
-  - id: "provider"
+  - id: "default"
     main: ./main.go
-    binary: terraform-provider-keep_v{{.Version}}
+    binary: '{{ .ProjectName }}_v{{ .Version }}_x5'  # Required for Terraform CLI 0.12+
     goos:
       - linux
       - darwin
@@ -19,26 +19,29 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X main.version={{.Version}}
+      - -s -w -X main.version={{ .Version }}
     env:
       - CGO_ENABLED=0
+    mod_timestamp: '{{ .CommitTimestamp }}'
 
 # Archive configuration
 archives:
-  - id: "provider"
-    name_template: >-
-      {{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
-    format: zip
+  - id: "default"
     files:
-      - README.md
-      - LICENSE
+      # Include only the binary and license file
+      - src: LICENSE
+        dst: LICENSE.txt
+      - src: README.md
+    formats: ['zip']
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
 
 # Checksums configuration for Terraform Registry
 checksum:
-  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
-  # Disable signature for now as it's optional for Terraform Registry
-  disable_sign: true
+  # Include extra files in checksum
+  extra_files:
+    - glob: '*.json'
 
 # Release configuration
 release:
@@ -46,10 +49,7 @@ release:
     owner: ChrisGute
     name: terraform-provider-keep
   name_template: 'v{{.Version}}'
-  draft: false
   prerelease: false
-  # Don't delete the dist folder
-  rm_dist: false
 
 # Before hooks
 before:
@@ -57,11 +57,13 @@ before:
     - go mod download
     - go test -v -short ./...
 
-# Terraform provider configuration
-# This tells GoReleaser to generate the required files for the Terraform Registry
-tf_legacy:
-  enabled: true
-  # This will create the required .terraformrc file
-  files:
-    - README.md
-    - LICENSE
+# Signing configuration (optional but recommended)
+signs:
+  - args: ["sign", "--dearmor", "--file", "${artifact}", "--out", "${signature}"]
+    artifacts: checksum
+    cmd: gpg  # or 'signore' if using HashiCorp's signing service
+    signature: ${artifact}.sig
+
+# Snapshot configuration
+snapshot:
+  name_template: "{{ .Tag }}-next"
