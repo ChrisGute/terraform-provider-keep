@@ -2,9 +2,28 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/keephq/terraform-provider-keep.svg)](https://pkg.go.dev/github.com/keephq/terraform-provider-keep)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Tests](https://github.com/keephq/terraform-provider-keep/actions/workflows/test.yml/badge.svg)](https://github.com/keephq/terraform-provider-keep/actions)
+[![Tests](https://github.com/ChrisGute/terraform-provider-keep/actions/workflows/test.yml/badge.svg)](https://github.com/ChrisGute/terraform-provider-keep/actions)
+[![Terraform Registry](https://img.shields.io/badge/terraform-registry-623CE4.svg)](https://registry.terraform.io/providers/ChrisGute/keep/latest)
 
-This provider allows you to manage your [KeepHQ](https://keephq.dev) resources using Terraform. With this provider, you can manage your alert providers, alerts, and other KeepHQ resources as code.
+This provider allows you to manage your [KeepHQ](https://keephq.dev) resources using Terraform. With this provider, you can manage your alert providers, alerts, mapping rules, and other KeepHQ resources as code.
+
+## Features
+
+- **Multi-Platform Support**: Linux, macOS, and Windows (amd64 and arm64)
+- **Signed Releases**: All releases are GPG signed for verification
+- **Terraform Registry**: Available on the [Terraform Registry](https://registry.terraform.io/providers/ChrisGute/keep/latest)
+- **Infrastructure as Code**: Define and manage your KeepHQ resources using HCL
+
+## Supported Resources
+
+| Resource | Status | Description |
+|----------|--------|-------------|
+| `keep_mapping_rule` | ✅ Production Ready | Manage mapping rules for alert correlation and routing |
+| `keep_extraction_rule` | ✅ Production Ready | Define data extraction rules for alerts |
+| `keep_provider` | ✅ Production Ready | Manage alert providers and integrations |
+| `keep_alert` | 🔧 In Development | Alert management |
+
+> **Note**: Check the [documentation](https://registry.terraform.io/providers/ChrisGute/keep/latest/docs) for the most up-to-date resource coverage.
 
 > **Note**: This provider is currently in **beta**. The mapping rule resource is production-ready, while other resources are still under development.
 
@@ -72,12 +91,39 @@ This section outlines the current coverage of the KeepHQ API by this Terraform p
 
 ## Requirements
 
-- [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.21 (to build the provider plugin)
+| Name | Version |
+|------|---------|
+| [terraform](https://www.terraform.io/downloads.html) | >= 1.0 |
+| [go](https://golang.org/doc/install) | >= 1.21 |
+
+## Development
+
+For information about building and contributing to this provider, see the [Development Guide](DEVELOPMENT.md).
+
+## Security
+
+### GPG Verification
+
+All releases are signed with GPG. To verify the integrity of downloaded files:
+
+```bash
+# Import the public key
+gpg --import .github/gpg/terraform-provider-keep-ci.pub
+
+# Verify the checksums file
+gpg --verify terraform-provider-keep_*.SHA256SUMS.sig terraform-provider-keep_*.SHA256SUMS
+
+# Verify the checksum of a downloaded file
+shasum -a 256 -c terraform-provider-keep_*.SHA256SUMS 2>/dev/null | grep OK
+```
+
+## License
+
+This project is licensed under the [Mozilla Public License 2.0](LICENSE).
 
 ## Installation
 
-### Terraform Registry (Recommended for Production)
+### Terraform Registry (Recommended)
 
 1. Add the provider to your Terraform configuration:
 
@@ -85,10 +131,15 @@ This section outlines the current coverage of the KeepHQ API by this Terraform p
    terraform {
      required_providers {
        keep = {
-         source  = "keephq/keep"
-         version = "~> 0.1.0"
+         source  = "chrisgute/keep"
+         version = "~> 0.1.5"
        }
      }
+   }
+   
+   provider "keep" {
+     api_key = var.keep_api_key
+     url     = var.keep_api_url  # Default: http://localhost:3000
    }
    ```
 
@@ -96,6 +147,18 @@ This section outlines the current coverage of the KeepHQ API by this Terraform p
    ```bash
    terraform init
    ```
+
+### Verifying the Installation
+
+After installation, you can verify the provider is correctly installed:
+
+```bash
+$ terraform providers
+
+Providers required by configuration:
+.
+└── provider[registry.terraform.io/chrisgute/keep] ~> 0.1.5
+```
 
 ### Local Installation (Development)
 
@@ -180,24 +243,93 @@ Configure the provider in your Terraform configuration:
 ```hcl
 provider "keep" {
   # API key for authentication (required)
-  api_key = "your-keephq-api-key"
+  api_key = var.keep_api_key  # or use a secure variable reference
   
-  # API URL (optional, defaults to http://localhost:8080)
-  # api_url = "https://your-keephq-instance.com"
+  # API URL (optional, defaults to http://localhost:3000)
+  url = var.keep_api_url
+  
+  # Timeout for API requests in seconds (optional, defaults to 30)
+  # request_timeout = 60
+  
+  # Enable debug logging (optional)
+  # debug = true
+}
+
+# Example variables
+variable "keep_api_key" {
+  description = "KeepHQ API key"
+  type        = string
+  sensitive   = true
+}
+
+variable "keep_api_url" {
+  description = "KeepHQ API URL"
+  type        = string
+  default     = "http://localhost:3000"
 }
 ```
 
-### Environment Variables
+### Authentication
 
-You can also configure the provider using environment variables:
+You can provide credentials in several ways (in order of precedence):
 
-- `KEEP_API_KEY`: Your KeepHQ API key (required)
-- `KEEP_API_URL`: KeepHQ API URL (optional, defaults to http://localhost:8080)
+1. **Directly in configuration** (not recommended for production):
+   ```hcl
+   provider "keep" {
+     api_key = "your-api-key"
+     url     = "https://your-keephq-instance.com"
+   }
+   ```
 
-Example:
+2. **Environment variables**:
+   ```bash
+   export KEEP_API_KEY="your-api-key"
+   export KEEP_API_URL="https://your-keephq-instance.com"
+   ```
 
-```bash
-export KEEP_API_KEY="your-api-key-here"
+3. **Terraform variables** (recommended):
+   ```bash
+   terraform apply -var="keep_api_key=your-api-key"
+   ```
+
+4. **Terraform Cloud/Enterprise variables** (most secure):
+   - Set `KEEP_API_KEY` and `KEEP_API_URL` as sensitive variables in your workspace
+
+### Example Usage
+
+#### Mapping Rule
+
+```hcl
+resource "keep_mapping_rule" "example" {
+  name        = "example-mapping-rule"
+  description = "Example mapping rule"
+  
+  matchers = [
+    ["key1", "value1"],
+    ["key2", "value2"]
+  ]
+  
+  csv_data = <<-EOT
+    column1,column2
+    value1,value2
+  EOT
+}
+```
+
+#### Extraction Rule
+
+```hcl
+resource "keep_extraction_rule" "example" {
+  name        = "example-extraction-rule"
+  description = "Example extraction rule"
+  
+  # Extraction configuration
+  config = {
+    source_field = "message"
+    pattern      = "(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}) (?P<level>\\w+): (?P<message>.+)"
+  }
+}
+```
 export KEEP_API_URL="https://your-keephq-instance.com"
 ```
 

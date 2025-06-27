@@ -48,4 +48,8 @@ debug
 # Local env files
 .env
 .env.*
+
+# GPG private keys
+*.asc
+!.github/gpg/*.pub
 !.env.example

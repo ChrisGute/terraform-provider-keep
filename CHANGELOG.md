@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- GPG signing for all release artifacts
+- Multi-architecture support (Linux, macOS, Windows on amd64 and arm64)
+- Automated GitHub Actions workflow for releases
+- Terraform Registry publishing
+- GPG key management documentation
+- Development guide with release process
+
+### Changed
+- Updated GoReleaser configuration for multi-platform builds
+- Improved documentation and examples
+- Enhanced error handling and logging
+- Updated provider configuration options
+
+### Fixed
+- Resolved GPG signing issues in CI/CD pipeline
+- Fixed environment variable handling in tests
+- Corrected provider source in documentation
+
+## [0.1.5] - 2025-06-27
+
+### Added
+- GPG signing for release artifacts
+- Multi-architecture build support
+- GitHub Actions workflow for automated releases
+- Documentation for GPG verification
+- Support for Terraform Registry publishing
+
+### Fixed
+- Resolved GPG signing path issues
+- Fixed environment variable handling in GoReleaser
+- Updated documentation for new release process
+
 ## [0.1.0] - 2025-06-26
 
 ### Added
