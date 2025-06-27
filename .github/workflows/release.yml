@@ -22,11 +22,9 @@ jobs:
         with:
           go-version: '1.21'
 
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v4
         with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
           version: latest
           args: release --rm-dist
@@ -37,27 +35,34 @@ jobs:
           # GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           # GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
-  terraform-registry:
-    needs: goreleaser
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Terraform Init
-        run: terraform init
-        working-directory: .release/terraform
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-        working-directory: .release/terraform
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_REF: ${{ github.ref }}
-          # TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_app_terraform_io }}
+# TODO: Add automated Terraform Registry publishing
+# This will require:
+# 1. Setting up a Terraform Cloud/Enterprise account
+# 2. Creating a .release/terraform directory with provider publishing configuration
+# 3. Adding TF_TOKEN_app_terraform_io secret to GitHub
+# 4. Uncommenting and configuring the terraform-registry job below
+#
+#  terraform-registry:
+#    needs: goreleaser
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#        with:
+#          fetch-depth: 0
+#
+#      - name: Setup Terraform
+#        uses: hashicorp/setup-terraform@v2
+#
+#      - name: Terraform Init
+#        run: terraform init
+#        working-directory: .release/terraform
+#
+#      - name: Terraform Apply
+#        run: terraform apply -auto-approve
+#        working-directory: .release/terraform
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          GITHUB_REPOSITORY: ${{ github.repository }}
+#          GITHUB_REF: ${{ github.ref }}
+#          TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_app_terraform_io }}
