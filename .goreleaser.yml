@@ -67,7 +67,7 @@ signs:
     # Environment variables that will be passed to the signing command
     env:
       - GPG_TTY=
-      - GNUPGHOME=${HOME}/.gnupg
+      - GNUPGHOME=/Users/cgutekanst/.gnupg
       - GPG_FINGERPRINT=99A4EDF564A2DA94
 
 # Snapshot configuration
