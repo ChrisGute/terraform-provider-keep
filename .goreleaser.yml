@@ -1,38 +1,84 @@
-# Minimal GoReleaser config for early development
-# Remove or simplify this file if not using GoReleaser yet
+# GoReleaser configuration for Terraform Provider
+# Reference: https://goreleaser.com/customization/terraform/
 
 version: 2
 
 # Project name and version
 project_name: terraform-provider-keep
 
-# Simple build configuration for local development
+# Build configuration
 builds:
-  - id: "local"
+  - id: "provider"
     main: ./main.go
     binary: terraform-provider-keep
-    goos: ["linux", "darwin"]  # Only build for common dev platforms
-    goarch: ["amd64"]          # Only build for amd64
-    flags: ["-trimpath"]
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
     ldflags:
       - -s -w -X main.version={{.Version}}
+    env:
+      - CGO_ENABLED=0
 
-dist: dist
+# Archive configuration
+archives:
+  - id: "provider"
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
 
-# Skip checksums and signing for now
+# Checksums configuration for Terraform Registry
 checksum:
-  disable: true
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
+  algorithm: sha256
+  # Disable signature for now - you'll need to set up GPG later
+  # signature: "{{ .ArtifactName }}.sig"
+  # Extra files to add to checksum
+  extra_files:
+    - glob: "*.zip"
 
-# Minimal release configuration
+# Release configuration
 release:
   github:
     owner: ChrisGute
     name: terraform-provider-keep
   name_template: 'v{{.Version}}'
-  draft: true  # Create as draft by default
+  draft: false
+  prerelease: false
+  # Don't delete the dist folder after release
+  # so we can inspect the artifacts
+  rm_dist: false
 
-# Run basic tests before release
+# Before hooks
 before:
   hooks:
     - go mod download
     - go test -v -short ./...
+
+# After hooks
+after:
+  hooks:
+    - make gen-docs  # If you have documentation generation
+
+# Terraform provider configuration
+# This tells GoReleaser to generate the required files for the Terraform Registry
+tf_legacy:
+  enabled: true
+  # This will create the required .terraformrc file
+  files:
+    - README.md
+    - LICENSE
+  # This will create the required .terraformrc file for the provider
+  # You'll need to replace this with your actual namespace
+  # and the correct registry URL if you're not using the public registry
+  # registry: "registry.terraform.io"
+  # namespace: "your-namespace"
