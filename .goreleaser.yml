@@ -62,11 +62,13 @@ before:
 signs:
   - cmd: gpg
     signature: ${artifact}.sig
-    args: ["--detach-sign", "--armor", "-u", "3A2149B196C6519D17ED0DF90EF0E903DD42A003", "--output", "${signature}", "${artifact}"]
+    args: ["--batch", "--yes", "--detach-sign", "--armor", "--local-user", "3A2149B196C6519D17ED0DF90EF0E903DD42A003", "--output", "${signature}", "${artifact}"]
     artifacts: checksum
     # Environment variables that will be passed to the signing command
     env:
-      - GPG_TTY=$(tty)
+      - GPG_TTY=
+      - GNUPGHOME=${HOME}/.gnupg
+      - GPG_FINGERPRINT=3A2149B196C6519D17ED0DF90EF0E903DD42A003
 
 # Snapshot configuration
 snapshot:
