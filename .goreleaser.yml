@@ -30,30 +30,67 @@ builds:
     tags:
       - netgo
 
-# Archive configuration
+# Archive configuration for Terraform Registry
 archives:
   - id: "default"
+    # Terraform expects archives in the format: 
+    # terraform-provider-{NAME}_{VERSION}_{OS}_{ARCH}.zip
     name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Include all relevant files in the archive
     files:
       - LICENSE
       - README.md
       - CHANGELOG.md
-    format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
+    # Use ZIP format for all platforms (recommended by Terraform)
+    format: zip
+    # Ensure the binary is at the root of the archive
+    wrap_in_directory: false
+    # Set file permissions
+    file_name_template: >
+      {{- .Binary }}
+      {{- if eq .Os "windows" }}.exe{{ end }}
 
-# Checksum configuration
+# Checksum configuration for Terraform Registry
 checksum:
-  name_template: 'checksums.txt'
+  # Terraform expects the checksums file to be named SHA256SUMS
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
+  # Include all files in the release
+  files:
+    - '*'
+  # This will be used to create both SHA256SUMS and SHA256SUMS.sig
+  signature:
+    enabled: true
+    # Use the GitHub token for signing (simplest approach)
+    # For production, consider using a GPG key
+    signature: '{{ .ArtifactName }}.sig'
+    args:
+      - '--batch'
+      - '--local-user'
+      - '{{ .Env.GITHUB_ACTOR }}'
+      - '--output'
+      - '${signature}'
+      - '${artifact}'
+    cmd: gpg
+    artifacts: checksum
 
-# Release configuration
+# Release configuration for Terraform Registry
 release:
   github:
     owner: ChrisGute
     name: terraform-provider-keep
+  # Terraform expects the release name to be the version with a 'v' prefix
   name_template: 'v{{.Version}}'
+  # Include all files in the release
+  extra_files:
+    - glob: "*.md"
+    - glob: "LICENSE"
+  # Set the release as a pre-release if it's a pre-release version
+  prerelease: auto
+  # Don't create a draft release
+  draft: false
+  # Disable the GitHub release if you want to create it manually
+  # disable: true
   draft: false
 
 # Before hook
