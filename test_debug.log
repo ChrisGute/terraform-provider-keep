@@ -1,0 +1,14 @@
+# github.com/keephq/terraform-provider-keep/internal/provider [github.com/keephq/terraform-provider-keep/internal/provider.test]
+internal/provider/resource_mapping_rule.go:25:39: cannot use &mappingRuleResource{} (value of type *mappingRuleResource) as "github.com/hashicorp/terraform-plugin-framework/resource".Resource value in variable declaration: *mappingRuleResource does not implement "github.com/hashicorp/terraform-plugin-framework/resource".Resource (missing method Delete)
+internal/provider/resource_mapping_rule.go:26:39: cannot use &mappingRuleResource{} (value of type *mappingRuleResource) as "github.com/hashicorp/terraform-plugin-framework/resource".ResourceWithConfigure value in variable declaration: *mappingRuleResource does not implement "github.com/hashicorp/terraform-plugin-framework/resource".ResourceWithConfigure (missing method Delete)
+internal/provider/resource_mapping_rule.go:27:39: cannot use &mappingRuleResource{} (value of type *mappingRuleResource) as "github.com/hashicorp/terraform-plugin-framework/resource".ResourceWithImportState value in variable declaration: *mappingRuleResource does not implement "github.com/hashicorp/terraform-plugin-framework/resource".ResourceWithImportState (missing method Delete)
+internal/provider/resource_mapping_rule.go:205:18: undefined: getStringPreview
+internal/provider/resource_mapping_rule.go:247:95: undefined: getStringPreview
+internal/provider/resource_mapping_rule.go:262:16: undefined: getStringPreview
+internal/provider/resource_mapping_rule.go:301:100: undefined: getStringPreview
+internal/provider/resource_mapping_rule.go:348:25: undefined: getStringPreview
+internal/provider/resource_mapping_rule.go:401:23: undefined: getMapKeys
+internal/provider/resource_mapping_rule.go:470:26: undefined: getStringPreview
+internal/provider/resource_mapping_rule.go:470:26: too many errors
+FAIL	github.com/keephq/terraform-provider-keep/internal/provider [build failed]
+FAIL
