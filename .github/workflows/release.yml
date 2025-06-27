@@ -41,10 +41,7 @@ jobs:
           cd dist
           zip terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
 
-      - name: Generate checksum
-        run: |
-          cd dist
-          sha256sum terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip > terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256
+      # Remove per-binary checksum generation. We'll generate a single SHA256SUMS file after all builds.
 
       - name: Import GPG key
         env:
@@ -53,10 +50,7 @@ jobs:
         run: |
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import
 
-      - name: Sign checksum
-        run: |
-          cd dist
-          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --armor --output terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256.asc --detach-sign terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256
+      # Remove per-binary signature generation. We'll sign the single SHA256SUMS file after all builds.
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -67,9 +61,45 @@ jobs:
             dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256
             dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256.asc
 
+  # New job to generate SHA256SUMS and sign it after all builds
+  post-build:
+    name: Aggregate Checksums and Sign
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Generate SHA256SUMS
+        run: |
+          cd dist
+          sha256sum terraform-provider-keep_*.zip > terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS
+
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Sign SHA256SUMS (binary signature)
+        run: |
+          cd dist
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --output terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS.sig --detach-sign terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS
+
+      - name: Upload SHA256SUMS and signature
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256sums
+          path: |
+            dist/terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS
+            dist/terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS.sig
+
   release:
     name: Create GitHub Release
-    needs: build
+    needs: post-build
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -80,7 +110,10 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/*.zip,dist/**/*.sha256,dist/**/*.asc
+          files: |
+            dist/**/*.zip
+            dist/terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS
+            dist/terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS.sig
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
