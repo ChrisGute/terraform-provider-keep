@@ -59,7 +59,7 @@ jobs:
           gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" --armor --output terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256.asc --detach-sign terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
           path: |
@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: dist
 
