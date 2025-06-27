@@ -1,14 +1,14 @@
-# Minimal GoReleaser config for Terraform Provider
-# Compatible with older GoReleaser versions
+# GoReleaser configuration for Terraform Provider
+# Follows the official Terraform provider release format
 
 # Project name and version
 project_name: terraform-provider-keep
 
 # Build configuration
 builds:
-  - id: "default"
+  - id: "provider"
     main: ./main.go
-    binary: terraform-provider-keep
+    binary: terraform-provider-keep_v{{.Version}}
     goos:
       - linux
       - darwin
@@ -24,8 +24,9 @@ builds:
 
 # Archive configuration
 archives:
-  - id: "default"
-    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: "provider"
+    name_template: >-
+      {{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
     format: zip
     files:
       - README.md
@@ -35,6 +36,8 @@ archives:
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
+  # Disable signature for now as it's optional for Terraform Registry
+  disable_sign: true
 
 # Release configuration
 release:
@@ -44,9 +47,20 @@ release:
   name_template: 'v{{.Version}}'
   draft: false
   prerelease: false
+  # Don't delete the dist folder
+  rm_dist: false
 
 # Before hooks
 before:
   hooks:
     - go mod download
     - go test -v -short ./...
+
+# Terraform provider configuration
+# This tells GoReleaser to generate the required files for the Terraform Registry
+tf_legacy:
+  enabled: true
+  # This will create the required .terraformrc file
+  files:
+    - README.md
+    - LICENSE
