@@ -62,7 +62,7 @@ before:
 signs:
   - cmd: gpg
     signature: ${artifact}.sig
-    args: ["--batch", "--yes", "--detach-sign", "--armor", "--local-user", "99A4EDF564A2DA94", "--output", "${signature}", "${artifact}"]
+    args: ["--batch", "--yes", "--detach-sign", "--local-user", "99A4EDF564A2DA94", "--output", "${signature}", "${artifact}"]
     artifacts: checksum
     # Environment variables that will be passed to the signing command
     env:

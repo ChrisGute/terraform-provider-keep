@@ -104,18 +104,45 @@ For information about building and contributing to this provider, see the [Devel
 
 ### GPG Verification
 
-All releases are signed with GPG. To verify the integrity of downloaded files:
+All releases are signed with GPG using the following key:
+
+```
+Fingerprint: 6954 E2AB 2EC0 5492 A0BE  B01B 99A4 EDF5 64A2 DA94
+Key ID: 99A4EDF564A2DA94
+Email: Terraform Provider Keep CI/CD <chris.gutekanst@gmail.com>
+```
+
+#### Verifying a Release
+
+1. **Import the public key** (one-time setup):
+   ```bash
+   curl -s https://raw.githubusercontent.com/ChrisGute/terraform-provider-keep/main/.github/gpg/terraform-provider-keep-ci.pub | gpg --import
+   ```
+
+2. **Verify the checksums signature**:
+   ```bash
+   gpg --verify terraform-provider-keep_*.SHA256SUMS.sig terraform-provider-keep_*.SHA256SUMS 2>&1 | grep "Good signature"
+   ```
+
+3. **Verify file integrity** (Linux/macOS):
+   ```bash
+   shasum -a 256 -c terraform-provider-keep_*.SHA256SUMS 2>/dev/null | grep OK
+   ```
+
+#### Verifying the Key
+
+You can verify the key's fingerprint matches the one shown above:
 
 ```bash
-# Import the public key
-gpg --import .github/gpg/terraform-provider-keep-ci.pub
-
-# Verify the checksums file
-gpg --verify terraform-provider-keep_*.SHA256SUMS.sig terraform-provider-keep_*.SHA256SUMS
-
-# Verify the checksum of a downloaded file
-shasum -a 256 -c terraform-provider-keep_*.SHA256SUMS 2>/dev/null | grep OK
+gpg --fingerprint 99A4EDF564A2DA94
 ```
+
+#### Why Verify?
+
+Verifying ensures that:
+- The release was created by the provider maintainers
+- The files haven't been tampered with
+- You're getting exactly what was released
 
 ## License
 
