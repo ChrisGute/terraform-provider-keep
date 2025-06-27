@@ -1,20 +1,24 @@
 name: Release
 
-# Only run on version tags (vX.Y.Z)
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'  # Matches v1.2.3 but not v0.1.0-rc.1
+      - 'v*.*.*'
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
-  # Simple build and test job
-  test:
+  build:
+    name: Build for all platforms
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Go
@@ -22,53 +26,64 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Test
-        run: go test -v -short ./...
+      - name: Set env vars
+        run: |
+          echo "GOOS=${{ matrix.goos }}" >> $GITHUB_ENV
+          echo "GOARCH=${{ matrix.goarch }}" >> $GITHUB_ENV
 
-  # Optional: Simple release job (uncomment when needed)
-  # release:
-  #   needs: test
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0
+      - name: Build binary
+        run: |
+          mkdir -p dist
+          go build -o dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }} ./
 
-  #     - name: Set up Go
-  #       uses: actions/setup-go@v4
-  #       with:
-  #         go-version: '1.21'
+      - name: Create ZIP archive
+        run: |
+          cd dist
+          zip terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
 
+      - name: Generate checksum
+        run: |
+          cd dist
+          sha256sum terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip > terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256
 
-  #     - name: Run GoReleaser
-  #       uses: goreleaser/goreleaser-action@v4
-  #       with:
-  #         distribution: goreleaser
-  #         version: latest
-  #         args: release --rm-dist
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
 
-# Note: For Terraform Registry publishing in the future:
-# 1. Set up Terraform Cloud/Enterprise account
-# 2. Add TF_TOKEN_app_terraform_io secret to GitHub
-# 3. Uncomment and configure the release job above
-#        with:
-#          fetch-depth: 0
-#
-#      - name: Setup Terraform
-#        uses: hashicorp/setup-terraform@v2
-#
-#      - name: Terraform Init
-#        run: terraform init
-#        working-directory: .release/terraform
-#
-#      - name: Terraform Apply
-#        run: terraform apply -auto-approve
-#        working-directory: .release/terraform
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          GITHUB_REPOSITORY: ${{ github.repository }}
-#          GITHUB_REF: ${{ github.ref }}
-#          TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_app_terraform_io }}
+      - name: Sign checksum
+        run: |
+          cd dist
+          gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" --armor --output terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256.asc --detach-sign terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: |
+            dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+            dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256
+            dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256.asc
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: dist
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*.zip,dist/**/*.sha256,dist/**/*.asc
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            See CHANGELOG.md for details.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
