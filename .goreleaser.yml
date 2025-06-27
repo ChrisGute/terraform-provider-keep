@@ -1,14 +1,12 @@
-# GoReleaser configuration for Terraform Provider
-# Reference: https://goreleaser.com/customization/terraform/
-
-version: 2
+# Minimal GoReleaser config for Terraform Provider
+# Compatible with older GoReleaser versions
 
 # Project name and version
 project_name: terraform-provider-keep
 
 # Build configuration
 builds:
-  - id: "provider"
+  - id: "default"
     main: ./main.go
     binary: terraform-provider-keep
     goos:
@@ -17,7 +15,6 @@ builds:
       - windows
     goarch:
       - amd64
-      - arm64
     flags:
       - -trimpath
     ldflags:
@@ -27,11 +24,9 @@ builds:
 
 # Archive configuration
 archives:
-  - id: "provider"
+  - id: "default"
     name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
+    format: zip
     files:
       - README.md
       - LICENSE
@@ -40,11 +35,6 @@ archives:
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
-  # Disable signature for now - you'll need to set up GPG later
-  # signature: "{{ .ArtifactName }}.sig"
-  # Extra files to add to checksum
-  extra_files:
-    - glob: "*.zip"
 
 # Release configuration
 release:
@@ -54,31 +44,9 @@ release:
   name_template: 'v{{.Version}}'
   draft: false
   prerelease: false
-  # Don't delete the dist folder after release
-  # so we can inspect the artifacts
-  rm_dist: false
 
 # Before hooks
 before:
   hooks:
     - go mod download
     - go test -v -short ./...
-
-# After hooks
-after:
-  hooks:
-    - make gen-docs  # If you have documentation generation
-
-# Terraform provider configuration
-# This tells GoReleaser to generate the required files for the Terraform Registry
-tf_legacy:
-  enabled: true
-  # This will create the required .terraformrc file
-  files:
-    - README.md
-    - LICENSE
-  # This will create the required .terraformrc file for the provider
-  # You'll need to replace this with your actual namespace
-  # and the correct registry URL if you're not using the public registry
-  # registry: "registry.terraform.io"
-  # namespace: "your-namespace"
