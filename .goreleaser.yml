@@ -1,0 +1,62 @@
+version: 2
+
+# Project name and version
+project_name: terraform-provider-keep
+
+# Build configuration
+builds:
+  - id: "keep"
+    binary: terraform-provider-keep
+    main: ./main.go
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: windows
+        goarch: arm64
+    env:
+      - CGO_ENABLED=0
+    tags:
+      - netgo
+
+# Archive configuration
+archives:
+  - id: "default"
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+
+# Checksum configuration
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+# Release configuration
+release:
+  github:
+    owner: ChrisGute
+    name: terraform-provider-keep
+  name_template: 'v{{.Version}}'
+  draft: false
+
+# Before hook
+before:
+  hooks:
+    - go mod download

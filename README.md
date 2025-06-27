@@ -77,32 +77,65 @@ This section outlines the current coverage of the KeepHQ API by this Terraform p
 
 ## Installation
 
-### Using Terraform Registry (Recommended)
+### Local Installation (Recommended for Development)
 
-1. Add the provider to your Terraform configuration:
+To use the provider from your local development environment:
 
-```hcl
-terraform {
-  required_providers {
-    keep = {
-      source  = "keephq/keep"
-      version = "~> 0.1"
-    }
-  }
-}
+1. Build the provider from source:
+   ```bash
+   git clone https://github.com/ChrisGute/terraform-provider-keep.git
+   cd terraform-provider-keep
+   make build
+   make install
+   ```
 
-provider "keep" {
-  # Configuration options
-}
-```
+2. Create a `versions.tf` file with the local provider:
+   ```hcl
+   terraform {
+     required_providers {
+       keep = {
+         source  = "local/keep/keep"
+         version = "0.1.0"
+       }
+     }
+   }
+   
+   provider "keep" {
+     api_key = "your-api-key-here"
+     api_url = "http://localhost:3000"  # Update with your KeepHQ URL
+   }
+   ```
 
-2. Run `terraform init` to install the provider.
+3. Run `terraform init` to initialize the provider.
+
+### Using from GitHub (For Production)
+
+To use this provider directly from the GitHub repository:
+
+1. Create a `versions.tf` file with the GitHub source:
+   ```hcl
+   terraform {
+     required_providers {
+       keep = {
+         source  = "ChrisGute/keep"
+         version = "~> 0.1"
+       }
+     }
+   }
+   
+   provider "keep" {
+     api_key = "your-api-key-here"
+     api_url = "https://your-keephq-instance.com"
+   }
+   ```
+
+2. Run `terraform init` to install the provider from GitHub.
 
 ### Building from Source
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/keephq/terraform-provider-keep.git
+   git clone git@github.com:ChrisGute/terraform-provider-keep.git
    cd terraform-provider-keep
    ```
 
@@ -111,12 +144,44 @@ provider "keep" {
    make build
    ```
 
-3. Install the provider:
+3. Install the provider locally:
    ```bash
    make install
    ```
 
-## Authentication
+   This will install the provider in the Terraform plugins directory for your user account.
+
+## Configuration
+
+### Provider Configuration
+
+Configure the provider in your Terraform configuration:
+
+```hcl
+provider "keep" {
+  # API key for authentication (required)
+  api_key = "your-keephq-api-key"
+  
+  # API URL (optional, defaults to http://localhost:8080)
+  # api_url = "https://your-keephq-instance.com"
+}
+```
+
+### Environment Variables
+
+You can also configure the provider using environment variables:
+
+- `KEEP_API_KEY`: Your KeepHQ API key (required)
+- `KEEP_API_URL`: KeepHQ API URL (optional, defaults to http://localhost:8080)
+
+Example:
+
+```bash
+export KEEP_API_KEY="your-api-key-here"
+export KEEP_API_URL="https://your-keephq-instance.com"
+```
+
+## Usage Examples
 
 ### Mapping Rule Example
 
@@ -126,11 +191,13 @@ resource "keep_mapping_rule" "example" {
   description = "Example mapping rule for production environment"
   priority    = 10
   
+  # Matchers are used to filter which alerts this rule applies to
   matchers = {
     env  = "production"
     team = "sre"
   }
 
+  # CSV data defines the mapping logic
   csv_data = <<-EOT
 env,team,owner,severity
 production,sre,alice,critical
@@ -138,6 +205,153 @@ staging,dev,bob,warning
   EOT
 }
 ```
+
+### Extraction Rule Example
+
+```hcl
+resource "keep_extraction_rule" "example" {
+  name        = "extract-http-status"
+  description = "Extract HTTP status code from log messages"
+  
+  # Pattern to match in the message
+  pattern = "status=(?P<http_status>\\d+)"
+  
+  # Optional: Only apply this rule to specific providers
+  # provider_id = "your-provider-id"
+  
+  # Optional: Add tags to extracted fields
+  tags = {
+    source = "http-logs"
+    type   = "regex-extraction"
+  }
+}
+```
+
+### Provider Configuration Example
+
+```hcl
+resource "keep_provider" "example" {
+  name        = "production-grafana"
+  type        = "grafana"
+  description = "Production Grafana instance"
+  
+  # Provider-specific configuration
+  config = {
+    url      = "https://grafana.example.com"
+    username = "api-user"
+    password = var.grafana_api_key
+  }
+  
+  # Optional: Provider tags
+  tags = {
+    environment = "production"
+    team        = "observability"
+  }
+}
+```
+
+## Authentication
+
+### API Key
+
+You'll need a KeepHQ API key to authenticate with the API. You can obtain this from your KeepHQ instance under Settings > API Keys.
+
+### Authentication Methods
+
+1. **Provider Configuration** (recommended for most cases):
+   ```hcl
+   provider "keep" {
+     api_key = "your-api-key-here"
+     api_url = "https://your-keephq-instance.com"
+   }
+   ```
+
+2. **Environment Variables**:
+   ```bash
+   export KEEP_API_KEY="your-api-key-here"
+   export KEEP_API_URL="https://your-keephq-instance.com"
+   ```
+
+3. **Terraform Variables** (for CI/CD):
+   ```hcl
+   variable "keep_api_key" {
+     description = "KeepHQ API key"
+     type        = string
+     sensitive   = true
+   }
+
+   provider "keep" {
+     api_key = var.keep_api_key
+   }
+   ```
+
+   Then pass the key when running Terraform:
+   ```bash
+   terraform apply -var="keep_api_key=your-api-key-here"
+   ```
+
+## Troubleshooting
+
+### Extraction Rule Creation Fails with HTML Response
+
+If you encounter an error like this when creating an extraction rule:
+
+```
+Error: Could not create extraction rule, unexpected error: error parsing extraction rule response:
+invalid character '<' looking for beginning of value
+```
+
+This typically means the API returned an HTML error page instead of JSON. Common causes include:
+
+1. **Incorrect API URL**: Ensure the `api_url` in your provider configuration points to the correct KeepHQ instance.
+2. **Authentication Failure**: Verify your API key is correct and has the necessary permissions.
+3. **Server Error**: The KeepHQ server might be experiencing issues. Check the server logs for more details.
+4. **Network Issues**: Ensure there are no network connectivity problems between your machine and the KeepHQ server.
+
+### Debugging API Requests
+
+To help diagnose issues, you can enable debug logging:
+
+```hcl
+provider "keep" {
+  api_key = "your-api-key-here"
+  api_url = "http://localhost:3000"
+  
+  # Enable debug logging
+  debug = true
+}
+```
+
+This will log detailed information about API requests and responses to help identify issues.
+
+### Common Issues and Solutions
+
+#### 1. Provider Not Found
+
+If you see an error like:
+```
+Could not find required providers, but found possible local directory for "local/keep/keep"
+```
+
+Make sure you've built and installed the provider locally:
+```bash
+make build
+make install
+```
+
+#### 2. Authentication Errors
+
+If you receive authentication errors, verify:
+- The API key is correct and not expired
+- The API key has the necessary permissions
+- The `api_url` is correctly set
+
+#### 3. Resource Creation Fails
+
+If resource creation fails, check:
+- All required fields are provided
+- Field values match the expected format
+- The server logs for detailed error messages
 
 ## Development
 
