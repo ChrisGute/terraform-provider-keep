@@ -13,7 +13,12 @@ import (
 func TestAccProviderResource(t *testing.T) {
 	// Skip if running short tests
 	if testing.Short() {
-		t.Skip("skipping acceptance test in short mode")
+		t.Skip("Skipping acceptance test in short mode")
+	}
+
+	// Skip if acceptance testing is not enabled
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("Skipping acceptance test as TF_ACC is not set")
 	}
 
 	resourceName := "keep_provider.test"

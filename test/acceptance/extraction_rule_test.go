@@ -14,6 +14,10 @@ import (
 )
 
 func TestAccExtractionRule_basic(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping acceptance test in short mode")
+	}
+
 	t.Parallel()
 
 	// Get test configuration from environment

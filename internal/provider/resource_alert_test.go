@@ -11,6 +11,10 @@ import (
 )
 
 func TestAccAlertResource(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping acceptance test in short mode")
+	}
+
 	resourceName := "keep_alert.test"
 
 	resource.Test(t, resource.TestCase{
@@ -123,6 +127,14 @@ func testAccCheckAlertResourceExists(n string) resource.TestCheckFunc {
 }
 
 func TestAccAlertResource_validation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping validation test in short mode")
+	}
+
+	// Skip if acceptance testing is not enabled
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("Skipping acceptance test as TF_ACC is not set")
+	}
 	tests := []struct {
 		name        string
 		config      string

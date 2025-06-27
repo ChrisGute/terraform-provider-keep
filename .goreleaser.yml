@@ -1,99 +1,38 @@
+# Minimal GoReleaser config for early development
+# Remove or simplify this file if not using GoReleaser yet
+
 version: 2
 
 # Project name and version
 project_name: terraform-provider-keep
 
-# Build configuration
+# Simple build configuration for local development
 builds:
-  - id: "keep"
-    binary: terraform-provider-keep
+  - id: "local"
     main: ./main.go
-    mod_timestamp: "{{ .CommitTimestamp }}"
-    flags:
-      - -trimpath
+    binary: terraform-provider-keep
+    goos: ["linux", "darwin"]  # Only build for common dev platforms
+    goarch: ["amd64"]          # Only build for amd64
+    flags: ["-trimpath"]
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    ignore:
-      - goos: darwin
-        goarch: 386
-      - goos: windows
-        goarch: arm64
-    env:
-      - CGO_ENABLED=0
-    tags:
-      - netgo
+      - -s -w -X main.version={{.Version}}
 
-# Archive configuration for Terraform Registry
-archives:
-  - id: "default"
-    # Terraform expects archives in the format: 
-    # terraform-provider-{NAME}_{VERSION}_{OS}_{ARCH}.zip
-    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    # Include all relevant files in the archive
-    files:
-      - LICENSE
-      - README.md
-      - CHANGELOG.md
-    # Use ZIP format for all platforms (recommended by Terraform)
-    format: zip
-    # Ensure the binary is at the root of the archive
-    wrap_in_directory: false
-    # Set file permissions
-    file_name_template: >
-      {{- .Binary }}
-      {{- if eq .Os "windows" }}.exe{{ end }}
+dist: dist
 
-# Checksum configuration for Terraform Registry
+# Skip checksums and signing for now
 checksum:
-  # Terraform expects the checksums file to be named SHA256SUMS
-  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
-  algorithm: sha256
-  # Include all files in the release
-  files:
-    - '*'
-  # This will be used to create both SHA256SUMS and SHA256SUMS.sig
-  signature:
-    enabled: true
-    # Use the GitHub token for signing (simplest approach)
-    # For production, consider using a GPG key
-    signature: '{{ .ArtifactName }}.sig'
-    args:
-      - '--batch'
-      - '--local-user'
-      - '{{ .Env.GITHUB_ACTOR }}'
-      - '--output'
-      - '${signature}'
-      - '${artifact}'
-    cmd: gpg
-    artifacts: checksum
+  disable: true
 
-# Release configuration for Terraform Registry
+# Minimal release configuration
 release:
   github:
     owner: ChrisGute
     name: terraform-provider-keep
-  # Terraform expects the release name to be the version with a 'v' prefix
   name_template: 'v{{.Version}}'
-  # Include all files in the release
-  extra_files:
-    - glob: "*.md"
-    - glob: "LICENSE"
-  # Set the release as a pre-release if it's a pre-release version
-  prerelease: auto
-  # Don't create a draft release
-  draft: false
-  # Disable the GitHub release if you want to create it manually
-  # disable: true
-  draft: false
+  draft: true  # Create as draft by default
 
-# Before hook
+# Run basic tests before release
 before:
   hooks:
     - go mod download
+    - go test -v -short ./...

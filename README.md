@@ -77,7 +77,27 @@ This section outlines the current coverage of the KeepHQ API by this Terraform p
 
 ## Installation
 
-### Local Installation (Recommended for Development)
+### Terraform Registry (Recommended for Production)
+
+1. Add the provider to your Terraform configuration:
+
+   ```hcl
+   terraform {
+     required_providers {
+       keep = {
+         source  = "keephq/keep"
+         version = "~> 0.1.0"
+       }
+     }
+   }
+   ```
+
+2. Initialize Terraform to download the provider:
+   ```bash
+   terraform init
+   ```
+
+### Local Installation (Development)
 
 To use the provider from your local development environment:
 

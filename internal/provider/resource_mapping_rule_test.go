@@ -116,6 +116,10 @@ func testAccCheckMappingRuleDestroy(s *terraform.State) error {
 }
 
 func TestAccMappingRuleResource(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping acceptance test in short mode")
+	}
+
 	// Skip if acceptance testing is not enabled
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Skipping acceptance test as TF_ACC is not set")
