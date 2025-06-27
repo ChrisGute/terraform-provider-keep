@@ -1,5 +1,6 @@
 # GoReleaser configuration for Terraform Provider
 # Follows the official Terraform provider release format
+version: 2
 
 # Project name and version
 project_name: terraform-provider-keep
