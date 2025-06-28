@@ -18,6 +18,9 @@ jobs:
         goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
     steps:
+      - name: Set version without v
+        run: |
+          echo "VERSION_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -34,12 +37,12 @@ jobs:
       - name: Build binary
         run: |
           mkdir -p dist
-          go build -o dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }} ./
+          go build -o dist/terraform-provider-keep_${{ env.VERSION_NO_V }}_${{ matrix.goos }}_${{ matrix.goarch }} ./
 
       - name: Create ZIP archive
         run: |
           cd dist
-          zip terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
+          zip terraform-provider-keep_${{ env.VERSION_NO_V }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip terraform-provider-keep_${{ env.VERSION_NO_V }}_${{ matrix.goos }}_${{ matrix.goarch }}
 
       # Remove per-binary checksum generation. We'll generate a single SHA256SUMS file after all builds.
 
@@ -55,11 +58,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
+          name: terraform-provider-keep_${{ env.VERSION_NO_V }}_${{ matrix.goos }}_${{ matrix.goarch }}
           path: |
-            dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-            dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256
-            dist/terraform-provider-keep_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip.sha256.asc
+            dist/terraform-provider-keep_${{ env.VERSION_NO_V }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   # New job to generate SHA256SUMS and sign it after all builds
   post-build:
@@ -79,7 +80,7 @@ jobs:
       - name: Generate SHA256SUMS
         run: |
           cd dist
-          sha256sum terraform-provider-keep_*.zip > terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS
+          sha256sum terraform-provider-keep_*.zip > terraform-provider-keep_${{ env.VERSION_NO_V }}_SHA256SUMS
 
       - name: Import GPG key
         env:
@@ -91,15 +92,15 @@ jobs:
       - name: Sign SHA256SUMS (binary signature)
         run: |
           cd dist
-          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --output terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS.sig --detach-sign terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --output terraform-provider-keep_${{ env.VERSION_NO_V }}_SHA256SUMS.sig --detach-sign terraform-provider-keep_${{ env.VERSION_NO_V }}_SHA256SUMS
 
       - name: Upload SHA256SUMS and signature
         uses: actions/upload-artifact@v4
         with:
           name: sha256sums
           path: |
-            dist/terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS
-            dist/terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS.sig
+            dist/terraform-provider-keep_${{ env.VERSION_NO_V }}_SHA256SUMS
+            dist/terraform-provider-keep_${{ env.VERSION_NO_V }}_SHA256SUMS.sig
 
   release:
     name: Create GitHub Release
@@ -120,8 +121,8 @@ jobs:
         with:
           files: |
             dist/**/*.zip
-            dist/terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS
-            dist/terraform-provider-keep_${{ github.ref_name }}_SHA256SUMS.sig
+            dist/terraform-provider-keep_${{ env.VERSION_NO_V }}_SHA256SUMS
+            dist/terraform-provider-keep_${{ env.VERSION_NO_V }}_SHA256SUMS.sig
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
