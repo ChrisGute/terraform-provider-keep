@@ -72,6 +72,10 @@ jobs:
         with:
           path: dist
 
+      - name: Move all zip files to dist root
+        run: |
+          find dist -name "*.zip" -exec mv {} dist/ \;
+
       - name: Generate SHA256SUMS
         run: |
           cd dist
