@@ -111,6 +111,10 @@ jobs:
         with:
           path: dist
 
+      - name: Move SHA256SUMS and sig to dist root
+        run: |
+          find dist -name "terraform-provider-keep*_SHA256SUMS*" -exec mv {} dist/ \;
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
